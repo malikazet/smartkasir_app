@@ -14,6 +14,7 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
   final _namaTokoController = TextEditingController();
   final _alamatController = TextEditingController();
   final _noWaController = TextEditingController();
+  final _igController = TextEditingController();
   final _footerController = TextEditingController();
 
   bool _sedangMenyimpan = false;
@@ -30,6 +31,7 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
     _namaTokoController.dispose();
     _alamatController.dispose();
     _noWaController.dispose();
+    _igController.dispose();
     _footerController.dispose();
     super.dispose();
   }
@@ -48,6 +50,7 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
           'Jl. Brigjend H. Hasan Basry, Banjarmasin';
 
       _noWaController.text = prefs.getString('no_wa') ?? '081234567890';
+      _igController.text = prefs.getString('ig_toko') ?? '';
 
       _footerController.text =
           prefs.getString('footer_struk') ??
@@ -71,6 +74,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
       await prefs.setString('alamat_toko', _alamatController.text.trim());
 
       await prefs.setString('no_wa', _noWaController.text.trim());
+
+      // Tantangan 3: Simpan akun Instagram toko
+      await prefs.setString('ig_toko', _igController.text.trim());
 
       await prefs.setString('footer_struk', _footerController.text.trim());
 
@@ -237,6 +243,24 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
               decoration: InputDecoration(
                 labelText: 'Nomor WhatsApp / Kontak Toko',
                 prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Tantangan 3: Akun Instagram Toko
+            TextFormField(
+              controller: _igController,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: 'Instagram Toko',
+                hintText: 'Contoh: @smartkasirmalik',
+                prefixIcon: const Icon(Icons.alternate_email),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),

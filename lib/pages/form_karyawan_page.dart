@@ -19,7 +19,9 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
   final _pinController = TextEditingController();
 
   String _peranTerpilih = 'Kasir';
-  final List<String> _daftarPeran = ['Kasir', 'Admin', 'Manajer'];
+
+  // Tantangan 1: Menambahkan peran Supervisor
+  final List<String> _daftarPeran = ['Kasir', 'Admin', 'Supervisor', 'Manajer'];
 
   bool _sedangMenyimpan = false;
   bool get _isEditMode => widget.karyawan != null;
@@ -77,6 +79,7 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Terjadi kesalahan database: $e'),
@@ -85,7 +88,9 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _sedangMenyimpan = false);
+      if (mounted) {
+        setState(() => _sedangMenyimpan = false);
+      }
     }
   }
 
@@ -128,7 +133,7 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Setiap staf kasir memiliki PIN 4 digit untuk login shift penjualan.',
+                        'Setiap staf kasir memiliki PIN 6 digit untuk login shift penjualan.',
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontSize: 12,
@@ -140,6 +145,7 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
               ),
               const SizedBox(height: 20),
 
+              // Input nama karyawan
               TextFormField(
                 controller: _namaController,
                 decoration: InputDecoration(
@@ -164,17 +170,18 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
               ),
               const SizedBox(height: 16),
 
+              // Tantangan 2: PIN tepat 6 digit angka
               TextFormField(
                 controller: _pinController,
                 keyboardType: TextInputType.number,
                 obscureText: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(4),
+                  LengthLimitingTextInputFormatter(6),
                 ],
                 decoration: InputDecoration(
-                  labelText: 'PIN Kasir (4 Digit Angka)',
-                  hintText: 'Contoh: 1234',
+                  labelText: 'PIN Kasir (6 Digit Angka)',
+                  hintText: 'Contoh: 123456',
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -186,14 +193,15 @@ class _FormKaryawanPageState extends State<FormKaryawanPage> {
                   if (val == null || val.trim().isEmpty) {
                     return 'PIN kasir wajib diisi!';
                   }
-                  if (val.trim().length != 4) {
-                    return 'PIN kasir harus tepat 4 digit angka!';
+                  if (!RegExp(r'^[0-9]{6}$').hasMatch(val.trim())) {
+                    return 'PIN kasir harus tepat 6 digit angka!';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
+              // Dropdown jabatan
               DropdownButtonFormField<String>(
                 initialValue: _peranTerpilih,
                 decoration: InputDecoration(
