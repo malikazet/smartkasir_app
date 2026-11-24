@@ -1,8 +1,15 @@
+// Mengimpor antarmuka Flutter dan SharedPreferences
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'kelola_karyawan_page.dart';
+// Mengimpor DatabaseHelper
+import '../helpers/database_helper.dart';
 
+// Mengimpor halaman kelola karyawan dan pelanggan
+import 'kelola_karyawan_page.dart';
+import 'kelola_pelanggan_page.dart';
+
+// Halaman Pengaturan Profil Toko & Footer Struk Kasir
 class ProfilTokoPage extends StatefulWidget {
   const ProfilTokoPage({super.key});
 
@@ -11,19 +18,27 @@ class ProfilTokoPage extends StatefulWidget {
 }
 
 class _ProfilTokoPageState extends State<ProfilTokoPage> {
+  // Controller formulir pengaturan identitas toko
   final _namaTokoController = TextEditingController();
   final _alamatController = TextEditingController();
   final _noWaController = TextEditingController();
-  final _igController = TextEditingController();
   final _footerController = TextEditingController();
 
+  // Status visual tombol simpan
   bool _sedangMenyimpan = false;
+
+  // Nama kasir aktif yang sedang bertugas
   String _activeCashierName = 'Belum Ditentukan';
+
+  // TANTANGAN MANDIRI 3:
+  // Variabel jumlah pelanggan terdaftar
+  int? _jumlahPelanggan;
 
   @override
   void initState() {
     super.initState();
     _muatProfilToko();
+    _muatJumlahPelanggan();
   }
 
   @override
@@ -31,14 +46,25 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
     _namaTokoController.dispose();
     _alamatController.dispose();
     _noWaController.dispose();
-    _igController.dispose();
     _footerController.dispose();
     super.dispose();
   }
 
-  // Membaca profil toko dari SharedPreferences
+  // Menghitung jumlah pelanggan dari database SQLite
+  Future<void> _muatJumlahPelanggan() async {
+    final jumlah = await DatabaseHelper.instance.countPelanggan();
+
+    if (!mounted) return;
+
+    setState(() {
+      _jumlahPelanggan = jumlah;
+    });
+  }
+
+  // --- MEMBACA PENGATURAN TOKO DARI SHAREDPREFERENCES ---
   Future<void> _muatProfilToko() async {
     final prefs = await SharedPreferences.getInstance();
+
     if (!mounted) return;
 
     setState(() {
@@ -50,59 +76,39 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
           'Jl. Brigjend H. Hasan Basry, Banjarmasin';
 
       _noWaController.text = prefs.getString('no_wa') ?? '081234567890';
-      _igController.text = prefs.getString('ig_toko') ?? '';
 
-      _footerController.text =
-          prefs.getString('footer_struk') ??
-          'Terima Kasih Atas Kunjungan Anda! '
-              'Barang yang sudah dibeli tidak dapat ditukar.';
+      _footerController.text = prefs.getString('footer_struk') ?? 'Terima Kasih Atas Kunjungan Anda! Barang yang sudah dibeli tidak dapat ditukar.';
 
       _activeCashierName =
           prefs.getString('active_cashier_name') ?? 'Belum Ditentukan';
     });
   }
 
-  // Menyimpan pengaturan toko
+  // --- MENYIMPAN PENGATURAN TOKO KE SHAREDPREFERENCES ---
   Future<void> _simpanProfilToko() async {
     setState(() => _sedangMenyimpan = true);
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-      await prefs.setString('nama_toko', _namaTokoController.text.trim());
+    await prefs.setString('nama_toko', _namaTokoController.text.trim());
 
-      await prefs.setString('alamat_toko', _alamatController.text.trim());
+    await prefs.setString('alamat_toko', _alamatController.text.trim());
 
-      await prefs.setString('no_wa', _noWaController.text.trim());
+    await prefs.setString('no_wa', _noWaController.text.trim());
 
-      // Tantangan 3: Simpan akun Instagram toko
-      await prefs.setString('ig_toko', _igController.text.trim());
+    await prefs.setString('footer_struk', _footerController.text.trim());
 
-      await prefs.setString('footer_struk', _footerController.text.trim());
+    if (!mounted) return;
 
-      if (!mounted) return;
+    setState(() => _sedangMenyimpan = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Identitas toko berhasil diperbarui!'),
-          backgroundColor: Colors.green.shade700,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menyimpan profil toko: $e'),
-          backgroundColor: Colors.red.shade700,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _sedangMenyimpan = false);
-      }
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Identitas toko berhasil diperbarui!'),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -122,7 +128,7 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Kartu kasir aktif
+            // KARTU RINGKASAN KASIR BERTUGAS
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -189,9 +195,64 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
 
+            // MENU MANAJEMEN DATA PELANGGAN & MEMBER (MODUL M13)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Color(0xFF0D9488),
+                  child: Icon(Icons.people_alt, color: Colors.white, size: 20),
+                ),
+                title: const Text(
+                  'Data Pelanggan & Lokasi GPS',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+
+                // TANTANGAN MANDIRI 3:
+                // Menampilkan jumlah pelanggan secara dinamis
+                subtitle: Text(
+                  _jumlahPelanggan == null
+                      ? 'Memuat jumlah pelanggan...'
+                      : '$_jumlahPelanggan Member Pelanggan Terdaftar',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF1E3A8A),
+                ),
+
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const KelolaPelangganPage(),
+                    ),
+                  );
+
+                  // Memperbarui jumlah pelanggan setelah kembali
+                  if (!mounted) return;
+                  _muatJumlahPelanggan();
+                },
+              ),
+            ),
             const SizedBox(height: 20),
 
+            // FORM IDENTITAS USAHA (SHAREDPREFERENCES)
             const Text(
               'IDENTITAS USAHA & STRUK KASIR',
               style: TextStyle(
@@ -200,10 +261,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 color: Color(0xFF1E3A8A),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // Nama toko
+            // 1. NAMA TOKO
             TextFormField(
               controller: _namaTokoController,
               decoration: InputDecoration(
@@ -216,10 +276,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 fillColor: Colors.white,
               ),
             ),
-
             const SizedBox(height: 14),
 
-            // Alamat toko
+            // 2. ALAMAT TOKO
             TextFormField(
               controller: _alamatController,
               maxLines: 2,
@@ -233,10 +292,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 fillColor: Colors.white,
               ),
             ),
-
             const SizedBox(height: 14),
 
-            // Nomor WhatsApp
+            // 3. KONTAK WHATSAPP / TELEPON
             TextFormField(
               controller: _noWaController,
               keyboardType: TextInputType.phone,
@@ -250,28 +308,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 fillColor: Colors.white,
               ),
             ),
-
             const SizedBox(height: 14),
 
-            // Tantangan 3: Akun Instagram Toko
-            TextFormField(
-              controller: _igController,
-              keyboardType: TextInputType.text,
-              decoration: InputDecoration(
-                labelText: 'Instagram Toko',
-                hintText: 'Contoh: @smartkasirmalik',
-                prefixIcon: const Icon(Icons.alternate_email),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // Footer struk
+            // 4. CATATAN KAKI STRUK (FOOTER RECEIPT)
             TextFormField(
               controller: _footerController,
               maxLines: 2,
@@ -286,10 +325,9 @@ class _ProfilTokoPageState extends State<ProfilTokoPage> {
                 fillColor: Colors.white,
               ),
             ),
-
             const SizedBox(height: 24),
 
-            // Tombol simpan profil toko
+            // TOMBOL SIMPAN PENGATURAN
             ElevatedButton.icon(
               onPressed: _sedangMenyimpan ? null : _simpanProfilToko,
               style: ElevatedButton.styleFrom(
